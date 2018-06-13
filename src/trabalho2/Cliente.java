@@ -14,6 +14,8 @@ import java.net.Socket;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.Security;
@@ -47,6 +49,9 @@ public class Cliente {
     private static SecretKey chavesessao = null;
     private static byte[] iv = null;
     
+    private static Key chavePublica = null;
+    private static Key chavePrivada = null;
+    
     public static void main(String[] args) throws IOException, Exception {
 
         /*Socket cliente = new Socket("127.0.0.1", 12345);
@@ -67,6 +72,8 @@ public class Cliente {
 
         teclado.close();*/
         
+        geraChavePubPriv();
+        
         estabeleceConexao();
         
         enviaMsgServidor();
@@ -81,27 +88,58 @@ public class Cliente {
         //Pergunta a senha para ser derivada a chave de sessão
         System.out.println("Insira a senha que será utilizada para derivar sua chave de sessão: ");
         Scanner scanner = new Scanner(System.in);
-        chavesessao = generateDerivedKey(scanner.nextLine(), "881900f5d6e5cabca409675791601323", 10000);
+        String sal = "881900f5d6e5cabca409675791601323";
+        chavesessao = generateDerivedKey(scanner.nextLine(), sal, 10000);
         
         //Gera iv/nonce
         iv = geraIV();
         
+        //Transforma chave pública em string
+        String chavePubString = chavePublica.toString();
+        
+        //Envia chave pública para o servidor
         PrintStream saida = new PrintStream(socket.getOutputStream());
-        saida.println("teste");
-        System.out.println("Enviado para o servidor: teste");
+        saida.println(chavePubString);
+        System.out.println("Chave publica enviada para o servidor: " + chavePubString);
         
+        StringBuilder sb = new StringBuilder();
         
-        
+        //Recebe chave pública do servidor
         Scanner entrada = new Scanner(socket.getInputStream());
+        if(entrada.hasNextLine()) {
+            
+            //Necessita de três linhas para a chave pública
+            sb.append(entrada.nextLine());
+            
+            if(entrada.hasNextLine()){
+                
+                sb.append(System.lineSeparator());
+                sb.append(entrada.nextLine());
+                
+                if(entrada.hasNextLine()){
+                    sb.append(System.lineSeparator());
+                    sb.append(entrada.nextLine());
+                }
+                
+            }
+            System.out.println("Chave publica do servidor recebida: " + sb.toString());
+
+        }
         
+        //Envia a mensagen 1 do protocolo
+        saida.println("Mensagem 1");
+        System.out.println("Enviado para o servidor: Mensagem 1");
+        
+        //Recebe a mensagem 2 do protocolo
         if(entrada.hasNextLine()) {
 
             System.out.println("Recebido do servidor: " + entrada.nextLine());
 
         }
         
-        saida.println("uhull");
-        System.out.println("Enviado para o servidor: uhull");
+        //Envia a mensagem 3 do protocolo
+        saida.println("Mensagem 3");
+        System.out.println("Enviado para o servidor: Mensagem 3");
         
         //entrada.close();
         
@@ -171,6 +209,16 @@ public class Cliente {
         
         random.nextBytes(iv);
         return iv;
+    }
+    
+    private static void geraChavePubPriv() throws NoSuchAlgorithmException {
+
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        
+        KeyPair pair = generator.generateKeyPair();
+        chavePublica = pair.getPublic();
+        chavePrivada = pair.getPrivate();
+        
     }
     
 }

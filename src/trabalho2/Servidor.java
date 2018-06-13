@@ -69,19 +69,50 @@ public class Servidor {
         socket = servidor.accept();
         System.out.println("Conexão estabelecida com o cliente!");
         
-        Scanner entrada = new Scanner(socket.getInputStream());
+        StringBuilder sb = new StringBuilder();
         
+        //Recebe chave pública do cliente
+        Scanner entrada = new Scanner(socket.getInputStream());
+        if(entrada.hasNextLine()) {
+
+            //Necessita de três linhas para a chave pública
+            sb.append(entrada.nextLine());
+            
+            if(entrada.hasNextLine()){
+                
+                sb.append(System.lineSeparator());
+                sb.append(entrada.nextLine());
+                
+                if(entrada.hasNextLine()){
+                    sb.append(System.lineSeparator());
+                    sb.append(entrada.nextLine());
+                }
+                
+            }
+            System.out.println("Chave publica do cliente recebida: " + sb.toString());
+
+        }
+        
+        //Transforma chave pública em string
+        String chavePubString = chavePublica.toString();
+        
+        //Envia chave pública para o cliente
+        PrintStream saida = new PrintStream(socket.getOutputStream());
+        saida.println(chavePubString);
+        System.out.println("Chave publica enviada para o cliente: " + chavePubString);
+        
+        //Recebe a mensagem 1 do protocolo
         if(entrada.hasNextLine()) {
 
             System.out.println("Recebido do cliente: " + entrada.nextLine());
 
         }
         
-        PrintStream saida = new PrintStream(socket.getOutputStream());
+        //Envia mensagem 2 do protocolo
+        saida.println("Mensagem 2");
+        System.out.println("Enviado para o cliente: Mensagem 2");
         
-        saida.println("funcionou?");
-        System.out.println("Enviado para o cliente: funcionou?");
-        
+        //Recebe a mensagem 3 do protocolo
         if(entrada.hasNextLine()) {
 
             System.out.println("Recebido do cliente: " + entrada.nextLine());
