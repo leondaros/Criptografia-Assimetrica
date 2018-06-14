@@ -82,6 +82,8 @@ public class Cliente {
         
         estabeleceConexao();
         
+        System.out.println("");
+        
         enviaMsgServidor();
         
     }
@@ -159,18 +161,38 @@ public class Cliente {
         String idB = "Identificador de B";
         String chaveSessaoCifrada = cifraChaveSessao();
         saida.println(chaveSessaoCifrada + idB + na);
-        System.out.println("Enviado para o servidor: " + chaveSessaoCifrada + idB + na);
+        System.out.println("Mensagem 1 do protocolo enviada ao servidor: " + chaveSessaoCifrada + idB + na);
+        System.out.println("Chave de sessao Kab cifrada enviada: " + chaveSessaoCifrada);
+        System.out.println("Identificador de B enviado: " + idB);
+        System.out.println("Nonce A enviado: " + na);
+        System.out.println("");
+        
         
         //Recebe a mensagem 2 do protocolo
+        String ivSessaoServidorString = null;
         if(entrada.hasNextLine()) {
 
-            System.out.println("Recebido do servidor: " + entrada.nextLine());
+            String mensagemRecebida = entrada.nextLine();
+            String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 512);
+            ivSessaoServidorString = mensagemRecebida.substring(530, 562);
+            na = mensagemRecebida.substring(562, 594);
+            decifraChaveSessaoServidor(chaveSessaoServidorCifrada);
+            String idA = mensagemRecebida.substring(512, 530);
+            System.out.println("Mensagem 2 recebida: " + mensagemRecebida);
+            System.out.println("Chave de sessao Kba cifrada recebida: " + chaveSessaoServidorCifrada);
+            System.out.println("Identificador de A recebido: " + idA);
+            System.out.println("Nonce B recebido: " + ivSessaoServidorString);
+            System.out.println("Nonce A recebido: " + na);
+            System.out.println("");
+            //System.out.println("Recebido do servidor: " + entrada.nextLine());
 
         }
         
         //Envia a mensagem 3 do protocolo
-        saida.println("Mensagem 3");
-        System.out.println("Enviado para o servidor: Mensagem 3");
+        saida.println(idB + ivSessaoServidorString);
+        System.out.println("Mensagem 3 do protocolo enviada ao servidor: " + idB + ivSessaoServidorString);
+        System.out.println("Identificador de B enviado: " + idB);
+        System.out.println("Nonce B enviado: " + ivSessaoServidorString);
         
         //entrada.close();
         
@@ -186,7 +208,9 @@ public class Cliente {
         PrintStream saida = new PrintStream(socket.getOutputStream());
         
         //IvParameterSpec ivSpec = new IvParameterSpec(iv);
-
+        
+        System.out.println("Digite a mensagem a ser enviada: ");
+        
         while (teclado.hasNextLine()) {
 
             /*
@@ -205,6 +229,7 @@ public class Cliente {
             
             gcmChave.init(true, params);
             
+            
             byte[] msgBytes = teclado.nextLine().getBytes();
             int outsize = gcmChave.getOutputSize(msgBytes.length);
             byte[] msgCifradaBytes = new byte[outsize];
@@ -216,6 +241,9 @@ public class Cliente {
             String msgCifradaHex = Utils4.toHex(msgCifradaBytes);
             System.out.println("Mensagem cifrada enviada:" + msgCifradaHex);
             saida.println(msgCifradaHex);
+            
+            System.out.println("");
+            System.out.println("Digite a mensagem a ser enviada: ");
             
             //teste
             /*GCMBlockCipher gcmChave2 = new GCMBlockCipher(new AESEngine());
@@ -301,6 +329,21 @@ public class Cliente {
 //        //fim teste
         
         return chaveSessaoCifrada;
+        
+    }
+
+    private static void decifraChaveSessaoServidor(String chaveSessaoServidorCifrada) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException {
+
+        int addProvider1 = Security.addProvider(new BouncyCastleProvider());
+        
+        Cipher cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, chavePrivada);
+        
+        byte[] chaveCifradaByte = org.apache.commons.codec.binary.Hex.decodeHex(chaveSessaoServidorCifrada.toCharArray());
+        byte[] chavePlanaByte = cipher.doFinal(chaveCifradaByte);
+        //teste
+        //O cliente não utiliza a chave de sessão do servidor
+        //testeChave = chavePlanaByte;
         
     }
     

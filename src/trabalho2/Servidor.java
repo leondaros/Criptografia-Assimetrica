@@ -23,6 +23,7 @@ import java.util.Scanner;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -35,6 +36,7 @@ import org.bouncycastle.crypto.modes.GCMBlockCipher;
 import org.bouncycastle.crypto.params.AEADParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import static trabalho2.Cliente.geraIV;
 
 /**
  *
@@ -50,13 +52,14 @@ public class Servidor {
     private static Key chavePubCliente = null;
     
     private static SecretKey chaveSessao = null;
-    private static SecretKey chaveSessaoCliente = null;
+    private static byte[] iv = null;
+    //private static SecretKey chaveSessaoCliente = null;
     //private static IvParameterSpec ivSessaoCliente = null;
     private static byte[] ivSessaoCliente = null;
     
-    private static byte[] testeChave = null;
+    private static byte[] chaveSessaoCliente = null;
     
-    public static void main(String[] args) throws IOException, NoSuchAlgorithmException, ClassNotFoundException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException, IllegalStateException, InvalidCipherTextException, NoSuchProviderException, InvalidAlgorithmParameterException {
+    public static void main(String[] args) throws IOException, NoSuchAlgorithmException, ClassNotFoundException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException, IllegalStateException, InvalidCipherTextException, NoSuchProviderException, InvalidAlgorithmParameterException, Exception {
 
         /*ServerSocket servidor = new ServerSocket(12345);
 
@@ -89,13 +92,20 @@ public class Servidor {
         
     }
     
-    public static void estabeleceConexao() throws IOException, ClassNotFoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException{
+    public static void estabeleceConexao() throws IOException, ClassNotFoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException, Exception{
         
         ServerSocket servidor = new ServerSocket(12345);
         
         System.out.println("Aguardando o cliente...");
         socket = servidor.accept();
         System.out.println("Conexão estabelecida com o cliente!");
+        
+        //Gera chave de sessao
+        KeyGenerator sKenGen = KeyGenerator.getInstance("AES"); 
+        chaveSessao = sKenGen.generateKey();
+        
+        //Gera iv/nonce
+        iv = geraIV();
         
         //StringBuilder sb = new StringBuilder();
         
@@ -151,27 +161,54 @@ public class Servidor {
         Scanner entrada = new Scanner(socket.getInputStream());
         PrintStream saida = new PrintStream(socket.getOutputStream());
   
+        String ivSessaoClienteString = null;
         //Recebe a mensagem 1 do protocolo
         if(entrada.hasNextLine()) {
 
             String mensagemRecebida = entrada.nextLine();
             String chaveSessaoClienteCifrada = mensagemRecebida.substring(0, 512);
-            String ivSessaoClienteString = mensagemRecebida.substring(530, 562);
+            ivSessaoClienteString = mensagemRecebida.substring(530, 562);
             ivSessaoCliente = org.apache.commons.codec.binary.Hex.decodeHex(ivSessaoClienteString.toCharArray());
             decifraChaveSessaoCliente(chaveSessaoClienteCifrada);
-            //System.out.println("Recebido do cliente: " + chaveSessaoClienteCifrada);
+            String idB = mensagemRecebida.substring(512, 530);
+            System.out.println("Mensagem 1 recebida: " + mensagemRecebida);
+            System.out.println("Chave de sessao Kab cifrada recebida: " + chaveSessaoClienteCifrada);
+            System.out.println("Identificador de B recebido: " + idB);
+            System.out.println("Nonce A recebido: " + ivSessaoClienteString);
+            System.out.println("");
             //System.out.println("Recebido do cliente: " + ivSessaoClienteString);
 
         }
         
         //Envia mensagem 2 do protocolo
-        saida.println("Mensagem 2");
-        System.out.println("Enviado para o cliente: Mensagem 2");
+        byte[] nbByte = iv;
+        String nb = Utils4.toHex(nbByte);
+        String idA = "Identificador de A";
+        String chaveSessaoCifrada = cifraChaveSessao();
+        saida.println(chaveSessaoCifrada + idA + nb + ivSessaoClienteString);
+        System.out.println("Mensagem 2 do protocolo enviada ao cliente: " + chaveSessaoCifrada + idA + nb + ivSessaoClienteString);
+        System.out.println("Chave de sessao Kba cifrada enviada: " + chaveSessaoCifrada);
+        System.out.println("Identificador de A enviado: " + idA);
+        System.out.println("Nonce B enviado: " + nb);
+        System.out.println("Nonce A enviado: " + ivSessaoClienteString);
+        System.out.println("");
+        
+        
+        //saida.println("Mensagem 2");
+        //System.out.println("Enviado para o cliente: Mensagem 2");
         
         //Recebe a mensagem 3 do protocolo
         if(entrada.hasNextLine()) {
 
-            System.out.println("Recebido do cliente: " + entrada.nextLine());
+            String msgRecebida = entrada.nextLine();
+            String idB = msgRecebida.substring(0, 18);
+            nb = msgRecebida.substring(18, 50);
+            
+            System.out.println("Mensagem 3 recebida: " + msgRecebida);
+            System.out.println("Identificador de B recebido: " + idB);
+            System.out.println("Nonce B recebido: " + nb);
+            System.out.println("");
+            
 
         }
         
@@ -190,20 +227,21 @@ public class Servidor {
 
             //Falta decifrar a mensagem cifrada do cliente
             GCMBlockCipher gcmChave = new GCMBlockCipher(new AESEngine());
-            KeyParameter chave2 = new KeyParameter(testeChave);
+            KeyParameter chave2 = new KeyParameter(chaveSessaoCliente);
             AEADParameters params = new AEADParameters(chave2, 64, ivSessaoCliente);
             
             gcmChave.init(false, params);
             
-            
-            byte[] msgBytes = org.apache.commons.codec.binary.Hex.decodeHex(entrada.nextLine().toCharArray());
+            String msgRecebida = entrada.nextLine();
+            byte[] msgBytes = org.apache.commons.codec.binary.Hex.decodeHex(msgRecebida.toCharArray());
             //byte[] msgBytes = entrada.nextLine().getBytes();
             int outsize = gcmChave.getOutputSize(msgBytes.length);
             byte[] msgDecifradaBytes = new byte[outsize];
             int offOut = gcmChave.processBytes(msgBytes, 0, msgBytes.length, msgDecifradaBytes, 0);
             
             gcmChave.doFinal(msgDecifradaBytes, offOut);
-            System.out.println(new String(msgDecifradaBytes));
+            System.out.println("Mensagem cifrada recebida do cliente: " + msgRecebida);
+            System.out.println("Mensagem decifrada recebida do cliente: " + new String(msgDecifradaBytes));
             
             /*
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
@@ -243,8 +281,24 @@ public class Servidor {
         byte[] chaveCifradaByte = org.apache.commons.codec.binary.Hex.decodeHex(chaveSessaoClienteCifrada.toCharArray());
         byte[] chavePlanaByte = cipher.doFinal(chaveCifradaByte);
         //teste
-        testeChave = chavePlanaByte;
+        chaveSessaoCliente = chavePlanaByte;
         //chaveSessaoCliente = new SecretKeySpec(chavePlanaByte, "AES");
+        
+    }
+
+    private static String cifraChaveSessao() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+
+        int addProvider = Security.addProvider(new BouncyCastleProvider());
+        
+        Cipher cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+        
+        cipher.init(Cipher.ENCRYPT_MODE, chavePubCliente);
+
+        byte[] cipherText = cipher.doFinal(chaveSessao.getEncoded());
+        
+        String chaveSessaoCifrada = Utils4.toHex(cipherText);
+        
+        return chaveSessaoCifrada;
         
     }
     
