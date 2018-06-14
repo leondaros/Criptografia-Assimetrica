@@ -106,20 +106,24 @@ public class Servidor {
         if(entrada.hasNextLine()) {
 
             String mensagemRecebida = entrada.nextLine();
-            //String chaveSessaoClienteCifrada = mensagemRecebida.substring(0, 512);
-            String chaveSessaoClienteCifrada = mensagemRecebida.substring(0, 256);
-            ivSessaoClienteString = mensagemRecebida.substring(274, 306);
+            String chaveSessaoClienteCifrada = mensagemRecebida.substring(0, 512);
+            //String chaveSessaoClienteCifrada = mensagemRecebida.substring(0, 256);
+            ivSessaoClienteString = mensagemRecebida.substring(530, 562);
+            //ivSessaoClienteString = mensagemRecebida.substring(274, 306);
             ivSessaoCliente = org.apache.commons.codec.binary.Hex.decodeHex(ivSessaoClienteString.toCharArray());
             decifraChaveSessaoCliente(chaveSessaoClienteCifrada);
-            String idB = mensagemRecebida.substring(256, 274);
-            assinatura = mensagemRecebida.substring(306, 562);
+            String idB = mensagemRecebida.substring(512, 530);
+            //String idB = mensagemRecebida.substring(256, 274);
+            assinatura = mensagemRecebida.substring(562, 1074);
+            //assinatura = mensagemRecebida.substring(306, 562);
             System.out.println("Mensagem 1 recebida: " + mensagemRecebida);
             System.out.println("Chave de sessao Kab cifrada recebida: " + chaveSessaoClienteCifrada);
             System.out.println("Identificador de B recebido: " + idB);
             System.out.println("Nonce A recebido: " + ivSessaoClienteString);
             System.out.println("Assinatura dos parâmetros recebida: " + assinatura);
             //Verifica assinatura
-            if(verificaAssinatura(mensagemRecebida.substring(0, 306), assinatura)){
+            if(verificaAssinatura(mensagemRecebida.substring(0, 562), assinatura)){
+            //if(verificaAssinatura(mensagemRecebida.substring(0, 306), assinatura)){
                 System.out.println("Autenticidade e Integridade foram garantidas!");
             }else{
                 System.out.println("Validacao da assinatura indica problemas de Autenticidade e/ou Integridade");
@@ -149,7 +153,8 @@ public class Servidor {
             String msgRecebida = entrada.nextLine();
             String idB = msgRecebida.substring(0, 18);
             nb = msgRecebida.substring(18, 50);
-            assinatura = msgRecebida.substring(50, 306);
+            assinatura = msgRecebida.substring(50, 562);
+            //assinatura = msgRecebida.substring(50, 306);
             
             System.out.println("Mensagem 3 recebida: " + msgRecebida);
             System.out.println("Identificador de B recebido: " + idB);
