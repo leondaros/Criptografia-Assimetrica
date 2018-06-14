@@ -119,16 +119,17 @@ public class Cliente {
         if(entrada.hasNextLine()) {
 
             String mensagemRecebida = entrada.nextLine();
-            //String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 512);
-            String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 256);
-            //ivSessaoServidorString = mensagemRecebida.substring(530, 562);
-            ivSessaoServidorString = mensagemRecebida.substring(274, 306);
-            //na = mensagemRecebida.substring(562, 594);
-            na = mensagemRecebida.substring(306, 338);
+            String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 512);
+            //String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 256);
+            ivSessaoServidorString = mensagemRecebida.substring(530, 562);
+            //ivSessaoServidorString = mensagemRecebida.substring(274, 306);
+            na = mensagemRecebida.substring(562, 594);
+            //na = mensagemRecebida.substring(306, 338);
             decifraChaveSessaoServidor(chaveSessaoServidorCifrada);
-            //String idA = mensagemRecebida.substring(512, 530);
-            String idA = mensagemRecebida.substring(256, 274);
-            assinatura = mensagemRecebida.substring(338, 594);
+            String idA = mensagemRecebida.substring(512, 530);
+            //String idA = mensagemRecebida.substring(256, 274);
+            assinatura = mensagemRecebida.substring(594, 1106);
+            //assinatura = mensagemRecebida.substring(338, 594);
             System.out.println("Mensagem 2 recebida: " + mensagemRecebida);
             System.out.println("Chave de sessao Kba cifrada recebida: " + chaveSessaoServidorCifrada);
             System.out.println("Identificador de A recebido: " + idA);
@@ -136,7 +137,8 @@ public class Cliente {
             System.out.println("Nonce A recebido: " + na);
             System.out.println("Assinatura dos parâmetros: " + assinatura);
             //Verifica assinatura
-            if(verificaAssinatura(mensagemRecebida.substring(0, 338), assinatura)){
+            if(verificaAssinatura(mensagemRecebida.substring(0, 594), assinatura)){
+            //if(verificaAssinatura(mensagemRecebida.substring(0, 338), assinatura)){
                 System.out.println("Autenticidade e Integridade foram garantidas!");
             }else{
                 System.out.println("Validacao da assinatura indica problemas de Autenticidade e/ou Integridade");
