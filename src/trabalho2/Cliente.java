@@ -102,9 +102,6 @@ public class Cliente {
         //Gera iv/nonce
         iv = geraIV();
         
-        //Transforma chave pública em string
-        String chavePubString = chavePublica.toString();
-        
         //Envia chave pública para o servidor
         /*
         PrintStream saida = new PrintStream(socket.getOutputStream());
