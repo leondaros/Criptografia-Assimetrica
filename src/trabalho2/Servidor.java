@@ -27,10 +27,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.DecoderException;
-import org.apache.commons.codec.binary.Hex;
 import org.bouncycastle.crypto.InvalidCipherTextException;
 import org.bouncycastle.crypto.engines.AESEngine;
 import org.bouncycastle.crypto.modes.GCMBlockCipher;
@@ -54,42 +51,17 @@ public class Servidor {
     
     private static SecretKey chaveSessao = null;
     private static byte[] iv = null;
-    //private static SecretKey chaveSessaoCliente = null;
-    //private static IvParameterSpec ivSessaoCliente = null;
     private static byte[] ivSessaoCliente = null;
     
     private static byte[] chaveSessaoCliente = null;
     
     public static void main(String[] args) throws IOException, NoSuchAlgorithmException, ClassNotFoundException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException, IllegalStateException, InvalidCipherTextException, NoSuchProviderException, InvalidAlgorithmParameterException, Exception {
 
-        /*ServerSocket servidor = new ServerSocket(12345);
-
-        System.out.println("Porta 12345 aberta!");
-
-        Socket cliente = servidor.accept();
-
-        System.out.println("Nova conexão com o cliente "
-                + cliente.getInetAddress().getHostAddress());
-
-        Scanner entrada = new Scanner(cliente.getInputStream());
-
-        while (entrada.hasNextLine()) {
-
-            System.out.println(entrada.nextLine());
-
-        }
-
-        entrada.close();
-
-        servidor.close();*/
-        
         geraChavePubPriv();
         
         estabeleceConexao();
         
         ouvirCliente();
-        
-        
         
     }
     
@@ -108,31 +80,6 @@ public class Servidor {
         //Gera iv/nonce
         iv = geraIV();
         
-        //StringBuilder sb = new StringBuilder();
-        
-        //Recebe chave pública do cliente
-        /*
-        Scanner entrada = new Scanner(socket.getInputStream());
-        if(entrada.hasNextLine()) {
-
-            //Necessita de três linhas para a chave pública
-            sb.append(entrada.nextLine());
-            
-            if(entrada.hasNextLine()){
-                
-                sb.append(System.lineSeparator());
-                sb.append(entrada.nextLine());
-                
-                if(entrada.hasNextLine()){
-                    sb.append(System.lineSeparator());
-                    sb.append(entrada.nextLine());
-                }
-                
-            }
-            System.out.println("Chave publica do cliente recebida: " + sb.toString());
-
-        }
-        */
         //Recebe chave pública do cliente
         ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
         if((chavePubCliente = (Key) ois.readObject()) != null){
@@ -149,15 +96,6 @@ public class Servidor {
         System.out.println("");
         System.out.println(chavePublica.toString());
         System.out.println("");
-        /*
-        //Transforma chave pública em string
-        String chavePubString = chavePublica.toString();
-        
-        //Envia chave pública para o cliente
-        PrintStream saida = new PrintStream(socket.getOutputStream());
-        saida.println(chavePubString);
-        System.out.println("Chave publica enviada para o cliente: " + chavePubString);
-        */
         
         Scanner entrada = new Scanner(socket.getInputStream());
         PrintStream saida = new PrintStream(socket.getOutputStream());
@@ -187,7 +125,6 @@ public class Servidor {
                 System.out.println("Validacao da assinatura indica problemas de Autenticidade e/ou Integridade");
             }
             System.out.println("");
-            //System.out.println("Recebido do cliente: " + ivSessaoClienteString);
 
         }
         
@@ -205,10 +142,6 @@ public class Servidor {
         System.out.println("Nonce A enviado: " + ivSessaoClienteString);
         System.out.println("Assinatura dos parâmetros: " + assinatura);
         System.out.println("");
-        
-        
-        //saida.println("Mensagem 2");
-        //System.out.println("Enviado para o cliente: Mensagem 2");
         
         //Recebe a mensagem 3 do protocolo
         if(entrada.hasNextLine()) {
@@ -230,11 +163,7 @@ public class Servidor {
             }
             System.out.println("");
             
-
         }
-        
-        //entrada.close();
-        //saida.close();
         
     }
 
@@ -255,7 +184,6 @@ public class Servidor {
             
             String msgRecebida = entrada.nextLine();
             byte[] msgBytes = org.apache.commons.codec.binary.Hex.decodeHex(msgRecebida.toCharArray());
-            //byte[] msgBytes = entrada.nextLine().getBytes();
             int outsize = gcmChave.getOutputSize(msgBytes.length);
             byte[] msgDecifradaBytes = new byte[outsize];
             int offOut = gcmChave.processBytes(msgBytes, 0, msgBytes.length, msgDecifradaBytes, 0);
@@ -264,20 +192,7 @@ public class Servidor {
             System.out.println("Mensagem cifrada recebida do cliente: " + msgRecebida);
             System.out.println("Mensagem decifrada recebida do cliente: " + new String(msgDecifradaBytes));
             
-            /*
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
-            cipher.init(Cipher.DECRYPT_MODE, chaveSessaoCliente, ivSessaoCliente);
             
-            byte[] msgCifradaBytes = Hex.decodeHex(entrada.nextLine().toCharArray());
-            byte[] msgDecifradaBytes = cipher.doFinal(msgCifradaBytes);
-            String msgDecifrada = new String(msgDecifradaBytes);
-            
-            System.out.println(msgDecifrada);
-            */
-            //System.out.println(new String(testeChave));
-            //System.out.println(new String(ivSessaoCliente));
-            //System.out.println(entrada.nextLine());
-
         }
         
     }
@@ -301,9 +216,8 @@ public class Servidor {
         
         byte[] chaveCifradaByte = org.apache.commons.codec.binary.Hex.decodeHex(chaveSessaoClienteCifrada.toCharArray());
         byte[] chavePlanaByte = cipher.doFinal(chaveCifradaByte);
-        //teste
+        
         chaveSessaoCliente = chavePlanaByte;
-        //chaveSessaoCliente = new SecretKeySpec(chavePlanaByte, "AES");
         
     }
 
