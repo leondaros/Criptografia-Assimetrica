@@ -18,6 +18,7 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
@@ -157,11 +158,13 @@ public class Cliente {
         String na = Utils4.toHex(naByte);
         String idB = "Identificador de B";
         String chaveSessaoCifrada = cifraChaveSessao();
-        saida.println(chaveSessaoCifrada + idB + na);
-        System.out.println("Mensagem 1 do protocolo enviada ao servidor: " + chaveSessaoCifrada + idB + na);
+        String assinatura = assinaParametros(chaveSessaoCifrada + idB + na);
+        saida.println(chaveSessaoCifrada + idB + na + assinatura);
+        System.out.println("Mensagem 1 do protocolo enviada ao servidor: " + chaveSessaoCifrada + idB + na + assinatura);
         System.out.println("Chave de sessao Kab cifrada enviada: " + chaveSessaoCifrada);
         System.out.println("Identificador de B enviado: " + idB);
         System.out.println("Nonce A enviado: " + na);
+        System.out.println("Assinatura dos parâmetros: " + assinatura);
         System.out.println("");
         
         
@@ -170,26 +173,40 @@ public class Cliente {
         if(entrada.hasNextLine()) {
 
             String mensagemRecebida = entrada.nextLine();
-            String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 512);
-            ivSessaoServidorString = mensagemRecebida.substring(530, 562);
-            na = mensagemRecebida.substring(562, 594);
+            //String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 512);
+            String chaveSessaoServidorCifrada = mensagemRecebida.substring(0, 256);
+            //ivSessaoServidorString = mensagemRecebida.substring(530, 562);
+            ivSessaoServidorString = mensagemRecebida.substring(274, 306);
+            //na = mensagemRecebida.substring(562, 594);
+            na = mensagemRecebida.substring(306, 338);
             decifraChaveSessaoServidor(chaveSessaoServidorCifrada);
-            String idA = mensagemRecebida.substring(512, 530);
+            //String idA = mensagemRecebida.substring(512, 530);
+            String idA = mensagemRecebida.substring(256, 274);
+            assinatura = mensagemRecebida.substring(338, 594);
             System.out.println("Mensagem 2 recebida: " + mensagemRecebida);
             System.out.println("Chave de sessao Kba cifrada recebida: " + chaveSessaoServidorCifrada);
             System.out.println("Identificador de A recebido: " + idA);
             System.out.println("Nonce B recebido: " + ivSessaoServidorString);
             System.out.println("Nonce A recebido: " + na);
+            System.out.println("Assinatura dos parâmetros: " + assinatura);
+            //Verifica assinatura
+            if(verificaAssinatura(mensagemRecebida.substring(0, 338), assinatura)){
+                System.out.println("Autenticidade e Integridade foram garantidas!");
+            }else{
+                System.out.println("Validacao da assinatura indica problemas de Autenticidade e/ou Integridade");
+            }
             System.out.println("");
             //System.out.println("Recebido do servidor: " + entrada.nextLine());
 
         }
         
         //Envia a mensagem 3 do protocolo
-        saida.println(idB + ivSessaoServidorString);
-        System.out.println("Mensagem 3 do protocolo enviada ao servidor: " + idB + ivSessaoServidorString);
+        assinatura = assinaParametros(idB + ivSessaoServidorString);
+        saida.println(idB + ivSessaoServidorString + assinatura);
+        System.out.println("Mensagem 3 do protocolo enviada ao servidor: " + idB + ivSessaoServidorString + assinatura);
         System.out.println("Identificador de B enviado: " + idB);
         System.out.println("Nonce B enviado: " + ivSessaoServidorString);
+        System.out.println("Assinatura dos parâmetros: " + assinatura);
         
         //entrada.close();
         
@@ -341,6 +358,47 @@ public class Cliente {
         //teste
         //O cliente não utiliza a chave de sessão do servidor
         //testeChave = chavePlanaByte;
+        
+    }
+
+    private static String assinaParametros(String parametros) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
+
+        int addProvider = Security.addProvider(new BouncyCastleProvider());
+        
+        MessageDigest hash =  MessageDigest.getInstance("SHA256");
+        hash.update(Utils4.toByteArray(parametros));
+        
+        Cipher cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+        
+        cipher.init(Cipher.ENCRYPT_MODE, chavePrivada);
+
+        byte[] hashAssinadoByte = cipher.doFinal(hash.digest());
+        
+        String hashAssinado = Utils4.toHex(hashAssinadoByte);
+        
+        return hashAssinado;
+        
+    }
+
+    private static boolean verificaAssinatura(String parametros, String assinatura) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, DecoderException, IllegalBlockSizeException, BadPaddingException {
+
+        int addProvider = Security.addProvider(new BouncyCastleProvider());
+        
+        MessageDigest hash =  MessageDigest.getInstance("SHA256");
+        hash.update(Utils4.toByteArray(parametros));
+        byte[] hashParametrosCalculadoByte = hash.digest();
+        String hashParametrosCalculado = Utils4.toHex(hashParametrosCalculadoByte);
+        System.out.println("O hash dos parametros calculado é: " + hashParametrosCalculado);
+        
+        Cipher cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+        cipher.init(Cipher.DECRYPT_MODE, chavePubServidor);
+        
+        byte[] assinaturaByte = org.apache.commons.codec.binary.Hex.decodeHex(assinatura.toCharArray());
+        byte[] hashRecebidoByte = cipher.doFinal(assinaturaByte);
+        String hashRecebido = Utils4.toHex(hashRecebidoByte);
+        System.out.println("O hash recebido foi: " + hashRecebido);
+        
+        return hashParametrosCalculado.equals(hashRecebido);
         
     }
     
